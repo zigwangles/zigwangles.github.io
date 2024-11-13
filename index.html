@@ -39,7 +39,6 @@
         .video-container {
             margin: 1rem 0;
             max-width: 100%;
-            position: relative;
         }
 
         #video-player {
@@ -113,7 +112,6 @@
             flex: 1;
             min-width: 150px;
             background-color: #28a745;
-            margin-top: 0;
         }
 
         .error-message {
@@ -121,39 +119,6 @@
             margin: 1rem 0;
             padding: 0.5rem;
             background-color: #f8d7da;
-            border-radius: 4px;
-        }
-
-        .loading-indicator {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1rem;
-            border-radius: 4px;
-            display: none;
-        }
-
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 320px;
-            margin: 1rem 0;
-        }
-
-        .processing-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
             border-radius: 4px;
         }
     </style>
@@ -197,132 +162,34 @@
                 this.videoUrl = URL.createObjectURL(videoFile);
             }
 
-            async createClip(start, end, format = 'webm') {
-                return new Promise((resolve, reject) => {
+            async createClip(start, end) {
+                const videoBlob = this.videoFile;
+                const duration = end - start;
+                
+                try {
+                    // Create a video element to get the video duration
                     const video = document.createElement('video');
                     video.src = this.videoUrl;
-                    video.muted = true;
+                    
+                    await new Promise((resolve, reject) => {
+                        video.onloadedmetadata = () => resolve();
+                        video.onerror = () => reject(new Error('Error loading video'));
+                    });
 
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
+                    // Check if the timestamps are valid
+                    if (start >= video.duration || end > video.duration) {
+                        throw new Error('Timestamp exceeds video duration');
+                    }
 
-                    video.onloadedmetadata = () => {
-                        // Set canvas size to maintain aspect ratio but limit maximum dimensions
-                        const maxWidth = 640;
-                        const maxHeight = 360;
-                        let width = video.videoWidth;
-                        let height = video.videoHeight;
-                        
-                        if (width > maxWidth) {
-                            height = (maxWidth / width) * height;
-                            width = maxWidth;
-                        }
-                        if (height > maxHeight) {
-                            width = (maxHeight / height) * width;
-                            height = maxHeight;
-                        }
+                    if (end <= start) {
+                        throw new Error('End time must be after start time');
+                    }
 
-                        canvas.width = width;
-                        canvas.height = height;
-
-                        const stream = canvas.captureStream();
-                        const options = {
-                            mimeType: format === 'webm' ? 'video/webm;codecs=vp8' : 'video/mp4',
-                            videoBitsPerSecond: 2500000 // 2.5 Mbps for better compression
-                        };
-
-                        let mediaRecorder;
-                        try {
-                            mediaRecorder = new MediaRecorder(stream, options);
-                        } catch (e) {
-                            console.error('MediaRecorder error:', e);
-                            reject(new Error(`Format ${format} not supported`));
-                            return;
-                        }
-
-                        const chunks = [];
-                        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-                        mediaRecorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: format === 'webm' ? 'video/webm' : 'video/mp4' });
-                            resolve(blob);
-                        };
-
-                        video.currentTime = start;
-                        
-                        let frameCount = 0;
-                        const fps = 30;
-                        const duration = end - start;
-                        const totalFrames = Math.floor(duration * fps);
-
-                        video.onseeked = function draw() {
-                            if (frameCount < totalFrames) {
-                                ctx.drawImage(video, 0, 0, width, height);
-                                video.currentTime = start + (frameCount / fps);
-                                frameCount++;
-                                
-                                if (frameCount === 1) {
-                                    mediaRecorder.start();
-                                }
-                                
-                                requestAnimationFrame(() => video.onseeked = draw);
-                            } else {
-                                mediaRecorder.stop();
-                                video.remove();
-                            }
-                        };
-                    };
-
-                    video.onerror = () => {
-                        console.error('Video loading error:', video.error);
-                        reject(new Error('Error loading video'));
-                    };
-                });
-            }
-
-            async generatePreview(start, end) {
-                return new Promise((resolve, reject) => {
-                    const video = document.createElement('video');
-                    video.src = this.videoUrl;
-                    video.muted = true;
-
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-
-                    video.onloadedmetadata = () => {
-                        const maxWidth = 320;
-                        const maxHeight = 180;
-                        let width = video.videoWidth;
-                        let height = video.videoHeight;
-                        
-                        if (width > maxWidth) {
-                            height = (maxWidth / width) * height;
-                            width = maxWidth;
-                        }
-                        if (height > maxHeight) {
-                            width = (maxHeight / height) * width;
-                            height = maxHeight;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-
-                        video.currentTime = start + (end - start) / 2;
-
-                        video.onseeked = () => {
-                            ctx.drawImage(video, 0, 0, width, height);
-                            canvas.toBlob(blob => {
-                                URL.revokeObjectURL(video.src);
-                                resolve(URL.createObjectURL(blob));
-                            }, 'image/jpeg', 0.8);
-                            video.remove();
-                        };
-                    };
-
-                    video.onerror = () => {
-                        console.error('Preview generation error:', video.error);
-                        reject(new Error('Error generating preview'));
-                    };
-                });
+                    return videoBlob;
+                } catch (error) {
+                    console.error('Error creating clip:', error);
+                    throw error;
+                }
             }
         }
 
@@ -371,11 +238,11 @@
             return /^\d{1,2}:\d{2}$/.test(timestamp);
         }
 
-        async function downloadClip(blob, index, format) {
+        async function downloadClip(blob, index) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `clip_${index + 1}.${format}`;
+            a.download = `clip_${index + 1}.mp4`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -437,67 +304,38 @@
                     <p>Start: ${Math.floor(timestamp.start / 60)}:${(timestamp.start % 60).toString().padStart(2, '0')}</p>
                     <p>End: ${Math.floor(timestamp.end / 60)}:${(timestamp.end % 60).toString().padStart(2, '0')}</p>
                     <p>Duration: ${(timestamp.end - timestamp.start).toFixed(1)} seconds</p>
-                    <div class="video-wrapper">
-                        <video class="preview-video" controls></video>
-                        <div class="processing-overlay">Generating preview...</div>
-                    </div>
+                    <video class="preview-video" controls></video>
                     <div class="download-options">
-                        <button class="download-btn" data-format="webm">Download WebM</button>
-                        <button class="download-btn" data-format="mp4">Download MP4</button>
+                        <button class="download-btn">Download Clip</button>
                     </div>
                 `;
 
                 previewContainer.appendChild(clipDiv);
 
-                // Generate preview clip
-                try {
-                    const previewClip = await videoProcessor.createClip(timestamp
-                    const previewClip = await videoProcessor.createClip(timestamp.start, timestamp.end);
-                    const previewUrl = URL.createObjectURL(previewClip);
-                    const previewVideo = clipDiv.querySelector('.preview-video');
-                    const processingOverlay = clipDiv.querySelector('.processing-overlay');
-                    
-                    previewVideo.src = previewUrl;
-                    previewVideo.onloadeddata = () => {
-                        processingOverlay.style.display = 'none';
-                    };
+                const previewVideo = clipDiv.querySelector('.preview-video');
+                previewVideo.src = videoProcessor.videoUrl;
+                previewVideo.currentTime = timestamp.start;
 
-                    // Clean up preview URL when video is removed
-                    previewVideo.addEventListener('error', () => {
-                        URL.revokeObjectURL(previewUrl);
-                        processingOverlay.textContent = 'Error loading preview';
-                    });
-                } catch (error) {
-                    console.error('Preview generation error:', error);
-                    clipDiv.querySelector('.processing-overlay').textContent = 'Error generating preview';
-                }
+                // Add download handler
+                clipDiv.querySelector('.download-btn').addEventListener('click', async () => {
+                    const btn = clipDiv.querySelector('.download-btn');
+                    const originalText = btn.textContent;
+                    btn.disabled = true;
+                    btn.textContent = 'Processing...';
 
-                // Add download handlers
-                clipDiv.querySelectorAll('.download-btn').forEach(btn => {
-                    btn.addEventListener('click', async () => {
-                        const format = btn.dataset.format;
-                        const originalText = btn.textContent;
-                        const allButtons = clipDiv.querySelectorAll('.download-btn');
-                        
-                        // Disable all buttons during processing
-                        allButtons.forEach(b => b.disabled = true);
-                        btn.textContent = 'Processing...';
-
-                        try {
-                            const blob = await videoProcessor.createClip(timestamp.start, timestamp.end, format);
-                            await downloadClip(blob, i, format);
-                            btn.textContent = 'Download Complete!';
-                        } catch (error) {
-                            console.error('Download error:', error);
-                            btn.textContent = 'Error: ' + (error.message || 'Failed to process video');
-                        } finally {
-                            // Re-enable all buttons after processing
-                            setTimeout(() => {
-                                allButtons.forEach(b => b.disabled = false);
-                                btn.textContent = originalText;
-                            }, 2000);
-                        }
-                    });
+                    try {
+                        const blob = await videoProcessor.createClip(timestamp.start, timestamp.end);
+                        await downloadClip(blob, i);
+                        btn.textContent = 'Download Complete!';
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        btn.textContent = 'Error: ' + (error.message || 'Failed to process video');
+                    } finally {
+                        setTimeout(() => {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                        }, 2000);
+                    }
                 });
             }
         });
@@ -507,11 +345,6 @@
             if (videoProcessor) {
                 URL.revokeObjectURL(videoProcessor.videoUrl);
             }
-            document.querySelectorAll('video').forEach(video => {
-                if (video.src.startsWith('blob:')) {
-                    URL.revokeObjectURL(video.src);
-                }
-            });
         });
     </script>
 </body>
