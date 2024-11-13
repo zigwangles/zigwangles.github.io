@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Timestamp Splitter</title>
     <style>
-        /* Previous styles remain the same */
         * {
             margin: 0;
             padding: 0;
@@ -27,7 +26,66 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* ... (previous styles remain) ... */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .video-container {
+            margin: 1rem 0;
+            max-width: 100%;
+            position: relative;
+        }
+
+        #video-player {
+            width: 100%;
+            max-width: 640px;
+            max-height: 360px;
+            border-radius: 4px;
+        }
+
+        .timestamp-entry {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timestamp-start, .timestamp-end {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .remove-timestamp {
+            background-color: #dc3545;
+            padding: 0.5rem;
+            min-width: 36px;
+        }
 
         .preview-clip {
             margin-bottom: 2rem;
@@ -38,16 +96,10 @@
 
         .preview-video {
             width: 100%;
-            max-width: 400px;
+            max-width: 320px;
+            max-height: 180px;
             margin: 1rem 0;
             border-radius: 4px;
-        }
-
-        .format-select {
-            margin: 1rem 0;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border: 1px solid #ddd;
         }
 
         .download-options {
@@ -64,22 +116,12 @@
             margin-top: 0;
         }
 
-        .preview-timestamp {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
+        .error-message {
+            color: #dc3545;
             margin: 1rem 0;
+            padding: 0.5rem;
+            background-color: #f8d7da;
+            border-radius: 4px;
         }
 
         .loading-indicator {
@@ -92,6 +134,27 @@
             padding: 1rem;
             border-radius: 4px;
             display: none;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            margin: 1rem 0;
+        }
+
+        .processing-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -144,20 +207,35 @@
                     const ctx = canvas.getContext('2d');
 
                     video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
+                        // Set canvas size to maintain aspect ratio but limit maximum dimensions
+                        const maxWidth = 640;
+                        const maxHeight = 360;
+                        let width = video.videoWidth;
+                        let height = video.videoHeight;
+                        
+                        if (width > maxWidth) {
+                            height = (maxWidth / width) * height;
+                            width = maxWidth;
+                        }
+                        if (height > maxHeight) {
+                            width = (maxHeight / height) * width;
+                            height = maxHeight;
+                        }
 
-                        // Create a MediaRecorder with appropriate settings
+                        canvas.width = width;
+                        canvas.height = height;
+
                         const stream = canvas.captureStream();
                         const options = {
                             mimeType: format === 'webm' ? 'video/webm;codecs=vp8' : 'video/mp4',
-                            videoBitsPerSecond: 5000000 // 5 Mbps
+                            videoBitsPerSecond: 2500000 // 2.5 Mbps for better compression
                         };
 
                         let mediaRecorder;
                         try {
                             mediaRecorder = new MediaRecorder(stream, options);
                         } catch (e) {
+                            console.error('MediaRecorder error:', e);
                             reject(new Error(`Format ${format} not supported`));
                             return;
                         }
@@ -171,11 +249,21 @@
 
                         video.currentTime = start;
                         
+                        let frameCount = 0;
+                        const fps = 30;
+                        const duration = end - start;
+                        const totalFrames = Math.floor(duration * fps);
+
                         video.onseeked = function draw() {
-                            if (video.currentTime < end) {
-                                ctx.drawImage(video, 0, 0);
-                                video.currentTime += 1/30; // 30fps
-                                mediaRecorder.start();
+                            if (frameCount < totalFrames) {
+                                ctx.drawImage(video, 0, 0, width, height);
+                                video.currentTime = start + (frameCount / fps);
+                                frameCount++;
+                                
+                                if (frameCount === 1) {
+                                    mediaRecorder.start();
+                                }
+                                
                                 requestAnimationFrame(() => video.onseeked = draw);
                             } else {
                                 mediaRecorder.stop();
@@ -184,7 +272,10 @@
                         };
                     };
 
-                    video.onerror = () => reject(new Error('Error loading video'));
+                    video.onerror = () => {
+                        console.error('Video loading error:', video.error);
+                        reject(new Error('Error loading video'));
+                    };
                 });
             }
 
@@ -198,19 +289,39 @@
                     const ctx = canvas.getContext('2d');
 
                     video.onloadedmetadata = () => {
-                        canvas.width = 320;  // Preview size
-                        canvas.height = (video.videoHeight / video.videoWidth) * 320;
+                        const maxWidth = 320;
+                        const maxHeight = 180;
+                        let width = video.videoWidth;
+                        let height = video.videoHeight;
+                        
+                        if (width > maxWidth) {
+                            height = (maxWidth / width) * height;
+                            width = maxWidth;
+                        }
+                        if (height > maxHeight) {
+                            width = (maxHeight / height) * width;
+                            height = maxHeight;
+                        }
 
-                        video.currentTime = start + (end - start) / 2;  // Middle frame
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        video.currentTime = start + (end - start) / 2;
 
                         video.onseeked = () => {
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            canvas.toBlob(blob => resolve(URL.createObjectURL(blob)));
+                            ctx.drawImage(video, 0, 0, width, height);
+                            canvas.toBlob(blob => {
+                                URL.revokeObjectURL(video.src);
+                                resolve(URL.createObjectURL(blob));
+                            }, 'image/jpeg', 0.8);
                             video.remove();
                         };
                     };
 
-                    video.onerror = () => reject(new Error('Error generating preview'));
+                    video.onerror = () => {
+                        console.error('Preview generation error:', video.error);
+                        reject(new Error('Error generating preview'));
+                    };
                 });
             }
         }
@@ -226,6 +337,9 @@
         videoUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
+                if (videoProcessor) {
+                    URL.revokeObjectURL(videoProcessor.videoUrl);
+                }
                 videoProcessor = new VideoProcessor(file);
                 videoPlayer.src = videoProcessor.videoUrl;
             }
@@ -276,6 +390,7 @@
 
             previewContainer.innerHTML = '';
             const timestamps = [];
+            let hasError = false;
             
             document.querySelectorAll('.timestamp-entry').forEach(entry => {
                 const startInput = entry.querySelector('.timestamp-start');
@@ -288,24 +403,34 @@
                     errorDiv.className = 'error-message';
                     errorDiv.textContent = 'Invalid timestamp format. Please use MM:SS format.';
                     previewContainer.appendChild(errorDiv);
+                    hasError = true;
+                    return;
+                }
+
+                const startSeconds = timestampToSeconds(start);
+                const endSeconds = timestampToSeconds(end);
+
+                if (endSeconds <= startSeconds) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message';
+                    errorDiv.textContent = 'End time must be after start time.';
+                    previewContainer.appendChild(errorDiv);
+                    hasError = true;
                     return;
                 }
 
                 timestamps.push({
-                    start: timestampToSeconds(start),
-                    end: timestampToSeconds(end)
+                    start: startSeconds,
+                    end: endSeconds
                 });
             });
+
+            if (hasError) return;
 
             for (let i = 0; i < timestamps.length; i++) {
                 const timestamp = timestamps[i];
                 const clipDiv = document.createElement('div');
                 clipDiv.className = 'preview-clip';
-                
-                // Create preview video
-                const previewVideo = document.createElement('video');
-                previewVideo.className = 'preview-video';
-                previewVideo.controls = true;
                 
                 clipDiv.innerHTML = `
                     <h3>Clip ${i + 1}</h3>
@@ -314,7 +439,7 @@
                     <p>Duration: ${(timestamp.end - timestamp.start).toFixed(1)} seconds</p>
                     <div class="video-wrapper">
                         <video class="preview-video" controls></video>
-                        <div class="loading-indicator">Loading preview...</div>
+                        <div class="processing-overlay">Generating preview...</div>
                     </div>
                     <div class="download-options">
                         <button class="download-btn" data-format="webm">Download WebM</button>
@@ -326,12 +451,25 @@
 
                 // Generate preview clip
                 try {
+                    const previewClip = await videoProcessor.createClip(timestamp
                     const previewClip = await videoProcessor.createClip(timestamp.start, timestamp.end);
                     const previewUrl = URL.createObjectURL(previewClip);
                     const previewVideo = clipDiv.querySelector('.preview-video');
+                    const processingOverlay = clipDiv.querySelector('.processing-overlay');
+                    
                     previewVideo.src = previewUrl;
+                    previewVideo.onloadeddata = () => {
+                        processingOverlay.style.display = 'none';
+                    };
+
+                    // Clean up preview URL when video is removed
+                    previewVideo.addEventListener('error', () => {
+                        URL.revokeObjectURL(previewUrl);
+                        processingOverlay.textContent = 'Error loading preview';
+                    });
                 } catch (error) {
                     console.error('Preview generation error:', error);
+                    clipDiv.querySelector('.processing-overlay').textContent = 'Error generating preview';
                 }
 
                 // Add download handlers
@@ -339,7 +477,10 @@
                     btn.addEventListener('click', async () => {
                         const format = btn.dataset.format;
                         const originalText = btn.textContent;
-                        btn.disabled = true;
+                        const allButtons = clipDiv.querySelectorAll('.download-btn');
+                        
+                        // Disable all buttons during processing
+                        allButtons.forEach(b => b.disabled = true);
                         btn.textContent = 'Processing...';
 
                         try {
@@ -347,17 +488,30 @@
                             await downloadClip(blob, i, format);
                             btn.textContent = 'Download Complete!';
                         } catch (error) {
-                            btn.textContent = 'Error: ' + error.message;
                             console.error('Download error:', error);
+                            btn.textContent = 'Error: ' + (error.message || 'Failed to process video');
                         } finally {
+                            // Re-enable all buttons after processing
                             setTimeout(() => {
-                                btn.disabled = false;
+                                allButtons.forEach(b => b.disabled = false);
                                 btn.textContent = originalText;
                             }, 2000);
                         }
                     });
                 });
             }
+        });
+
+        // Clean up resources when leaving the page
+        window.addEventListener('beforeunload', () => {
+            if (videoProcessor) {
+                URL.revokeObjectURL(videoProcessor.videoUrl);
+            }
+            document.querySelectorAll('video').forEach(video => {
+                if (video.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(video.src);
+                }
+            });
         });
     </script>
 </body>
