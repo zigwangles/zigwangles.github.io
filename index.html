@@ -157,41 +157,97 @@
 
     <script>
         class VideoProcessor {
-            constructor(videoFile) {
-                this.videoFile = videoFile;
-                this.videoUrl = URL.createObjectURL(videoFile);
-            }
+    constructor(videoFile) {
+        this.videoFile = videoFile;
+        this.videoUrl = URL.createObjectURL(videoFile);
+    }
 
-            async createClip(start, end) {
-                const videoBlob = this.videoFile;
-                const duration = end - start;
+    async createClip(start, end) {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            const canvas = document.createElement('canvas');
+            const mediaStream = canvas.captureStream();
+            let mediaRecorder;
+            const chunks = [];
+
+            video.src = this.videoUrl;
+            video.muted = true; // Required for autoplay
+            
+            video.onloadedmetadata = () => {
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
                 
-                try {
-                    // Create a video element to get the video duration
-                    const video = document.createElement('video');
-                    video.src = this.videoUrl;
-                    
-                    await new Promise((resolve, reject) => {
-                        video.onloadedmetadata = () => resolve();
-                        video.onerror = () => reject(new Error('Error loading video'));
-                    });
-
-                    // Check if the timestamps are valid
-                    if (start >= video.duration || end > video.duration) {
-                        throw new Error('Timestamp exceeds video duration');
-                    }
-
-                    if (end <= start) {
-                        throw new Error('End time must be after start time');
-                    }
-
-                    return videoBlob;
-                } catch (error) {
-                    console.error('Error creating clip:', error);
-                    throw error;
+                const ctx = canvas.getContext('2d');
+                
+                // Check if timestamps are valid
+                if (start >= video.duration || end > video.duration) {
+                    reject(new Error('Timestamp exceeds video duration'));
+                    return;
                 }
-            }
-        }
+                
+                if (end <= start) {
+                    reject(new Error('End time must be after start time'));
+                    return;
+                }
+
+                // Setup MediaRecorder
+                mediaRecorder = new MediaRecorder(mediaStream, {
+                    mimeType: 'video/webm;codecs=vp8,opus',
+                    videoBitsPerSecond: 2500000 // 2.5 Mbps
+                });
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const clipBlob = new Blob(chunks, { type: 'video/webm' });
+                    resolve(clipBlob);
+                };
+
+                // Start recording and playback
+                mediaRecorder.start();
+                video.currentTime = start;
+                video.play();
+
+                // Draw frames to canvas and stop when reaching end time
+                function drawFrame() {
+                    if (video.currentTime >= end) {
+                        video.pause();
+                        mediaRecorder.stop();
+                        return;
+                    }
+                    
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    requestAnimationFrame(drawFrame);
+                }
+
+                video.onplay = () => {
+                    drawFrame();
+                };
+            };
+
+            video.onerror = () => {
+                reject(new Error('Error loading video'));
+            };
+        });
+    }
+}
+
+// Update the download function to handle WebM format
+async function downloadClip(blob, index) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clip_${index + 1}.webm`; // Changed extension to .webm
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 
         let videoProcessor = null;
         const videoUpload = document.getElementById('video-upload');
