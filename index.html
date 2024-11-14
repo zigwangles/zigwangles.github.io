@@ -18,61 +18,88 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 800px;
             margin: 0 auto;
             background-color: white;
             padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a73e8;
+            margin-bottom: 2rem;
+        }
+
+        .upload-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px dashed #1a73e8;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
 
-        .input-group {
-            margin-bottom: 1.5rem;
+        .upload-section:hover {
+            background-color: #f8f9fa;
         }
 
-        .input-group label {
+        .upload-label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #666;
         }
 
         .video-container {
-            margin: 1rem 0;
-            max-width: 100%;
+            margin-bottom: 2rem;
         }
 
-        #video-player {
+        video {
             width: 100%;
-            max-width: 640px;
-            max-height: 360px;
-            border-radius: 4px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
         }
 
-        .timestamp-entry {
+        .timestamp-section {
+            margin-bottom: 2rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .clips-section {
+            margin-bottom: 2rem;
+        }
+
+        .clip-item {
             display: flex;
-            gap: 0.5rem;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
             margin-bottom: 0.5rem;
         }
 
-        .timestamp-start, .timestamp-end {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 120px;
-        }
-
         button {
-            padding: 0.5rem 1rem;
-            background-color: #007bff;
+            background-color: #1a73e8;
             color: white;
             border: none;
+            padding: 0.5rem 1rem;
             border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            font-size: 1rem;
         }
 
         button:hover {
-            background-color: #0056b3;
+            background-color: #1557b0;
         }
 
         button:disabled {
@@ -80,305 +107,161 @@
             cursor: not-allowed;
         }
 
-        .remove-timestamp {
-            background-color: #dc3545;
-            padding: 0.5rem;
-            min-width: 36px;
-        }
-
-        .preview-clip {
-            margin-bottom: 2rem;
+        .instructions {
+            margin-top: 2rem;
             padding: 1rem;
             background-color: #f8f9fa;
             border-radius: 4px;
         }
 
-        .preview-video {
-            width: 100%;
-            max-width: 320px;
-            max-height: 180px;
-            margin: 1rem 0;
-            border-radius: 4px;
-        }
-
-        .download-options {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-
-        .download-btn {
-            flex: 1;
-            min-width: 150px;
-            background-color: #28a745;
-        }
-
-        .error-message {
+        .error {
             color: #dc3545;
-            margin: 1rem 0;
-            padding: 0.5rem;
-            background-color: #f8d7da;
-            border-radius: 4px;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Video Timestamp Splitter</h1>
-        
-        <div class="input-group">
-            <label for="video-upload">Upload Video:</label>
-            <input type="file" id="video-upload" accept="video/*">
+
+        <div class="upload-section">
+            <label class="upload-label">Select Video File (MP4)</label>
+            <input type="file" id="videoFile" accept="video/mp4">
         </div>
 
         <div class="video-container">
-            <video id="video-player" controls>
-                Your browser doesn't support the video player.
+            <video id="videoPlayer" controls>
+                Your browser does not support the video tag.
             </video>
         </div>
 
-        <div class="input-group">
-            <label>Timestamps:</label>
-            <div id="timestamps-container" class="timestamps-container">
-                <div class="timestamp-entry">
-                    <input type="text" placeholder="Start time (00:00)" class="timestamp-start">
-                    <input type="text" placeholder="End time (00:00)" class="timestamp-end">
-                    <button class="remove-timestamp">×</button>
-                </div>
-            </div>
-            <button id="add-timestamp">Add Timestamp</button>
+        <div class="timestamp-section">
+            <h2>Enter Timestamps</h2>
+            <p>Format: HH:MM:SS - HH:MM:SS (one per line)</p>
+            <textarea id="timestamps" placeholder="00:00:00 - 00:00:10&#10;00:00:10 - 00:00:20"></textarea>
+            <button id="processButton" disabled>Process Clips</button>
         </div>
 
-        <button id="preview-splits">Generate Previews & Downloads</button>
+        <div class="clips-section">
+            <h2>Generated Clips</h2>
+            <div id="clipsList"></div>
+        </div>
 
-        <div id="preview-container" class="preview-container"></div>
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Upload an MP4 video file</li>
+                <li>Enter timestamps in the format HH:MM:SS - HH:MM:SS, one per line</li>
+                <li>Click "Process Clips" to generate video clips</li>
+                <li>Download individual clips using the download buttons</li>
+            </ol>
+        </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.js/0.10.0/ffmpeg.min.js"></script>
     <script>
-        class VideoProcessor {
-            constructor(videoFile) {
-                this.videoFile = videoFile;
-                this.videoUrl = URL.createObjectURL(videoFile);
-            }
+        const videoFile = document.getElementById('videoFile');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const timestamps = document.getElementById('timestamps');
+        const processButton = document.getElementById('processButton');
+        const clipsList = document.getElementById('clipsList');
 
-            async createClip(start, end) {
-                return new Promise((resolve, reject) => {
-                    const video = document.createElement('video');
-                    const canvas = document.createElement('canvas');
-                    const mediaRecorder = new MediaRecorder(canvas.captureStream(), {
-                        mimeType: 'video/webm;codecs=vp8,opus'
-                    });
-                    const chunks = [];
+        let videoBlob = null;
 
-                    video.src = this.videoUrl;
-                    video.muted = true; // Required for autoplay
-
-                    video.onloadedmetadata = () => {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-
-                        if (start >= video.duration || end > video.duration) {
-                            reject(new Error('Timestamp exceeds video duration'));
-                            return;
-                        }
-
-                        if (end <= start) {
-                            reject(new Error('End time must be after start time'));
-                            return;
-                        }
-
-                        mediaRecorder.ondataavailable = (event) => {
-                            if (event.data.size > 0) {
-                                chunks.push(event.data);
-                            }
-                        };
-
-                        mediaRecorder.onstop = () => {
-                            const blob = new Blob(chunks, { type: 'video/webm' });
-                            resolve(blob);
-                        };
-
-                        mediaRecorder.start();
-                        video.currentTime = start;
-                        video.play();
-
-                        function drawFrame() {
-                            if (video.currentTime >= end) {
-                                video.pause();
-                                mediaRecorder.stop();
-                                return;
-                            }
-
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            requestAnimationFrame(drawFrame);
-                        }
-
-                        video.onplay = () => {
-                            drawFrame();
-                        };
-                    };
-
-                    video.onerror = () => {
-                        reject(new Error('Error loading video'));
-                    };
-                });
-            }
-        }
-
-        let videoProcessor = null;
-        const videoUpload = document.getElementById('video-upload');
-        const videoPlayer = document.getElementById('video-player');
-        const addTimestampBtn = document.getElementById('add-timestamp');
-        const timestampsContainer = document.getElementById('timestamps-container');
-        const previewSplitsBtn = document.getElementById('preview-splits');
-        const previewContainer = document.getElementById('preview-container');
-
-        videoUpload.addEventListener('change', (e) => {
+        videoFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                if (videoProcessor) {
-                    URL.revokeObjectURL(videoProcessor.videoUrl);
-                }
-                videoProcessor = new VideoProcessor(file);
-                videoPlayer.src = videoProcessor.videoUrl;
+                videoBlob = file;
+                videoPlayer.src = URL.createObjectURL(file);
+                processButton.disabled = false;
             }
         });
 
-        addTimestampBtn.addEventListener('click', () => {
-            const timestampEntry = document.createElement('div');
-            timestampEntry.className = 'timestamp-entry';
-            timestampEntry.innerHTML = `
-                <input type="text" placeholder="Start time (00:00)" class="timestamp-start">
-                <input type="text" placeholder="End time (00:00)" class="timestamp-end">
-                <button class="remove-timestamp">×</button>
-            `;
-            timestampsContainer.appendChild(timestampEntry);
+        function parseTimestamp(timestamp) {
+            const [hours, minutes, seconds] = timestamp.split(':').map(Number);
+            return hours * 3600 + minutes * 60 + seconds;
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        processButton.addEventListener('click', () => {
+            const timestampLines = timestamps.value.trim().split('\n');
+            clipsList.innerHTML = '';
+
+            timestampLines.forEach((line, index) => {
+                const [start, end] = line.split('-').map(t => parseTimestamp(t.trim()));
+                createClip(start, end, index);
+            });
         });
 
-        timestampsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-timestamp')) {
-                e.target.parentElement.remove();
-            }
-        });
-
-        function timestampToSeconds(timestamp) {
-            const [minutes, seconds] = timestamp.split(':').map(Number);
-            return minutes * 60 + seconds;
-        }
-
-        function isValidTimestamp(timestamp) {
-            return /^\d{1,2}:\d{2}$/.test(timestamp);
-        }
-
-        async function downloadClip(blob, index) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `clip_${index + 1}.webm`; // Ensure the correct extension
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        previewSplitsBtn.addEventListener('click', async () => {
-            if (!videoProcessor) {
-                alert('Please upload a video first');
-                return;
-            }
-
-            previewContainer.innerHTML = '';
-            const timestamps = [];
-            let hasError = false;
+        function createClip(start, end, index) {
+            const clipItem = document.createElement('div');
+            clipItem.className = 'clip-item';
             
-            document.querySelectorAll('.timestamp-entry').forEach(entry => {
-                const startInput = entry.querySelector('.timestamp-start');
-                const endInput = entry.querySelector('.timestamp-end');
-                const start = startInput.value;
-                const end = endInput.value;
-
-                if (!isValidTimestamp(start) || !isValidTimestamp(end)) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'error-message';
-                    errorDiv.textContent = 'Invalid timestamp format. Please use MM:SS format.';
-                    previewContainer.appendChild(errorDiv);
-                    hasError = true;
-                    return;
-                }
-
-                const startSeconds = timestampToSeconds(start);
-                const endSeconds = timestampToSeconds(end);
-
-                if (endSeconds <= startSeconds) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'error-message';
-                    errorDiv.textContent = 'End time must be after start time.';
-                    previewContainer.appendChild(errorDiv);
-                    hasError = true;
-                    return;
-                }
-
-                timestamps.push({
-                    start: startSeconds,
-                    end: endSeconds
-                });
+            const timeLabel = document.createElement('span');
+            timeLabel.textContent = `Clip ${index + 1}: ${formatTime(start)} - ${formatTime(end)}`;
+            
+            const downloadButton = document.createElement('button');
+            downloadButton.textContent = 'Download Clip';
+            downloadButton.addEventListener('click', () => {
+                downloadClip(start, end, index);
             });
 
-            if (hasError) return;
+            clipItem.appendChild(timeLabel);
+            clipItem.appendChild(downloadButton);
+            clipsList.appendChild(clipItem);
+        }
 
-            for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = timestamps[i];
-                const clipDiv = document.createElement('div');
-                clipDiv.className = 'preview-clip';
+        function downloadClip(start, end, index) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(videoBlob);
+
+            video.addEventListener('loadedmetadata', () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
                 
-                clipDiv.innerHTML = `
-                    <h3>Clip ${i + 1}</h3>
-                    <p>Start: ${Math.floor(timestamp.start / 60)}:${(timestamp.start % 60).toString().padStart(2, '0')}</p>
-                    <p>End: ${Math.floor(timestamp.end / 60)}:${(timestamp.end % 60).toString().padStart(2, '0')}</p>
-                    <p>Duration: ${(timestamp.end - timestamp.start).toFixed(1)} seconds</p>
-                    <video class="preview-video" controls></video>
-                    <div class="download-options">
-                        <button class="download-btn">Download Clip</button>
-                    </div>
-                `;
-
-                previewContainer.appendChild(clipDiv);
-
-                const previewVideo = clipDiv.querySelector('.preview-video');
-                previewVideo.src = videoProcessor.videoUrl;
-                previewVideo.currentTime = timestamp.start;
-
-                clipDiv.querySelector('.download-btn').addEventListener('click', async () => {
-                    const btn = clipDiv.querySelector('.download-btn');
-                    const originalText = btn.textContent;
-                    btn.disabled = true;
-                    btn.textContent = 'Processing...';
-
-                    try {
-                        const blob = await videoProcessor.createClip(timestamp.start, timestamp.end);
-                        await downloadClip(blob, i);
-                        btn.textContent = 'Download Complete!';
-                    } catch (error) {
-                        console.error('Download error:', error);
-                        btn.textContent = 'Error: ' + (error.message || 'Failed to process video');
-                    } finally {
-                        setTimeout(() => {
-                            btn.disabled = false;
-                            btn.textContent = originalText;
-                        }, 2000);
-                    }
+                const stream = canvas.captureStream();
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9'
                 });
-            }
-        });
 
-        // Clean up resources when leaving the page
-        window.addEventListener('beforeunload', () => {
-            if (videoProcessor) {
-                URL.revokeObjectURL(videoProcessor.videoUrl);
-            }
-        });
+                const chunks = [];
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `clip_${index + 1}.webm`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+
+                video.currentTime = start;
+                video.play();
+                mediaRecorder.start();
+
+                const processFrame = () => {
+                    if (video.currentTime >= end) {
+                        video.pause();
+                        mediaRecorder.stop();
+                        return;
+                    }
+                    
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0);
+                    requestAnimationFrame(processFrame);
+                };
+
+                processFrame();
+            });
+        }
     </script>
 </body>
 </html>
