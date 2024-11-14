@@ -40,16 +40,6 @@
             text-align: center;
         }
 
-        .upload-section:hover {
-            background-color: #f8f9fa;
-        }
-
-        .upload-label {
-            display: block;
-            margin-bottom: 1rem;
-            color: #666;
-        }
-
         .video-container {
             margin-bottom: 2rem;
         }
@@ -57,7 +47,6 @@
         video {
             width: 100%;
             border-radius: 8px;
-            margin-bottom: 1rem;
         }
 
         .timestamp-section {
@@ -95,7 +84,6 @@
             padding: 0.5rem 1rem;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 1rem;
         }
 
         button:hover {
@@ -113,11 +101,6 @@
             background-color: #f8f9fa;
             border-radius: 4px;
         }
-
-        .error {
-            color: #dc3545;
-            margin-bottom: 1rem;
-        }
     </style>
 </head>
 <body>
@@ -125,7 +108,6 @@
         <h1>Video Timestamp Splitter</h1>
 
         <div class="upload-section">
-            <label class="upload-label">Select Video File (MP4)</label>
             <input type="file" id="videoFile" accept="video/mp4">
         </div>
 
@@ -145,16 +127,6 @@
         <div class="clips-section">
             <h2>Generated Clips</h2>
             <div id="clipsList"></div>
-        </div>
-
-        <div class="instructions">
-            <h3>Instructions:</h3>
-            <ol>
-                <li>Upload an MP4 video file</li>
-                <li>Enter timestamps in the format HH:MM:SS - HH:MM:SS, one per line</li>
-                <li>Click "Process Clips" to generate video clips</li>
-                <li>Download individual clips using the download buttons</li>
-            </ol>
         </div>
     </div>
 
@@ -207,58 +179,56 @@
             
             const downloadButton = document.createElement('button');
             downloadButton.textContent = 'Download Clip';
-            downloadButton.addEventListener('click', () => {
-                // Create a temporary video element
-                const tempVideo = document.createElement('video');
-                tempVideo.src = URL.createObjectURL(videoBlob);
-
-                tempVideo.onseeked = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = tempVideo.videoWidth;
-                    canvas.height = tempVideo.videoHeight;
-                    const ctx = canvas.getContext('2d');
-
-                    // Create a media recorder with the canvas stream
-                    const stream = canvas.captureStream();
-                    const recorder = new MediaRecorder(stream, {
-                        mimeType: 'video/webm'
-                    });
-
-                    const chunks = [];
-                    recorder.ondataavailable = e => chunks.push(e.data);
-                    recorder.onstop = () => {
-                        const clipBlob = new Blob(chunks, { type: 'video/webm' });
-                        const clipUrl = URL.createObjectURL(clipBlob);
-                        const a = document.createElement('a');
-                        a.href = clipUrl;
-                        a.download = `clip_${index + 1}.webm`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(clipUrl);
-                    };
-
-                    // Start recording and playing
-                    recorder.start();
-                    tempVideo.currentTime = start;
-                    tempVideo.play();
-
-                    // Function to process each frame
-                    function processFrame() {
-                        if (tempVideo.currentTime >= end) {
-                            tempVideo.pause();
-                            recorder.stop();
-                            return;
+            downloadButton.addEventListener('click', async () => {
+                const originalVideo = document.createElement('video');
+                originalVideo.src = URL.createObjectURL(videoBlob);
+                
+                await new Promise(resolve => {
+                    originalVideo.addEventListener('loadedmetadata', () => {
+                        // Create virtual video element
+                        const clipVideo = document.createElement('video');
+                        clipVideo.src = originalVideo.src;
+                        
+                        // Set the starting point
+                        clipVideo.currentTime = start;
+                        
+                        // Create a MediaRecorder to capture the clip
+                        const canvas = document.createElement('canvas');
+                        canvas.width = originalVideo.videoWidth;
+                        canvas.height = originalVideo.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        const stream = canvas.captureStream();
+                        const mediaRecorder = new MediaRecorder(stream);
+                        const chunks = [];
+                        
+                        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+                        mediaRecorder.onstop = () => {
+                            const blob = new Blob(chunks, { type: 'video/webm' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `clip_${index + 1}.webm`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        };
+                        
+                        mediaRecorder.start();
+                        clipVideo.play();
+                        
+                        function drawFrame() {
+                            if (clipVideo.currentTime >= end) {
+                                clipVideo.pause();
+                                mediaRecorder.stop();
+                                return;
+                            }
+                            ctx.drawImage(clipVideo, 0, 0, canvas.width, canvas.height);
+                            requestAnimationFrame(drawFrame);
                         }
-                        ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
-                        requestAnimationFrame(processFrame);
-                    }
-
-                    processFrame();
-                };
-
-                // Trigger the seek
-                tempVideo.currentTime = start;
+                        drawFrame();
+                        resolve();
+                    });
+                });
             });
 
             clipItem.appendChild(timeLabel);
