@@ -88,6 +88,28 @@
             margin-bottom: 0.5rem;
         }
 
+        .clip-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .progress-container {
+            width: 150px;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #1a73e8;
+            transition: width 0.3s ease;
+        }
+
         button {
             background-color: #1a73e8;
             color: white;
@@ -96,6 +118,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 1rem;
+            min-width: 120px;
         }
 
         button:hover {
@@ -158,7 +181,6 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ffmpeg.js/0.10.0/ffmpeg.min.js"></script>
     <script>
         const videoFile = document.getElementById('videoFile');
         const videoPlayer = document.getElementById('videoPlayer');
@@ -206,60 +228,92 @@
             const timeLabel = document.createElement('span');
             timeLabel.textContent = `Clip ${index + 1}: ${formatTime(start)} - ${formatTime(end)}`;
             
+            const clipControls = document.createElement('div');
+            clipControls.className = 'clip-controls';
+
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'progress-container';
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressContainer.appendChild(progressBar);
+
             const downloadButton = document.createElement('button');
             downloadButton.textContent = 'Download Clip';
             downloadButton.addEventListener('click', () => {
-                downloadClip(start, end, index);
+                downloadButton.disabled = true;
+                progressContainer.style.display = 'block';
+                downloadClip(start, end, index, progressBar, downloadButton, progressContainer);
             });
 
+            clipControls.appendChild(progressContainer);
+            clipControls.appendChild(downloadButton);
             clipItem.appendChild(timeLabel);
-            clipItem.appendChild(downloadButton);
+            clipItem.appendChild(clipControls);
             clipsList.appendChild(clipItem);
         }
 
-        function downloadClip(start, end, index) {
+        async function downloadClip(start, end, index, progressBar, downloadButton, progressContainer) {
+            const duration = end - start;
             const video = document.createElement('video');
             video.src = URL.createObjectURL(videoBlob);
 
-            video.addEventListener('loadedmetadata', () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                const stream = canvas.captureStream();
-                const mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm;codecs=vp9'
-                });
-
-                const chunks = [];
-                mediaRecorder.ondataavailable = e => chunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `clip_${index + 1}.webm`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                };
-
-                video.currentTime = start;
-                video.play();
-                mediaRecorder.start();
-
-                const processFrame = () => {
-                    if (video.currentTime >= end) {
-                        video.pause();
-                        mediaRecorder.stop();
-                        return;
-                    }
-                    
+            return new Promise((resolve) => {
+                video.addEventListener('loadedmetadata', async () => {
+                    const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-                    ctx.drawImage(video, 0, 0);
-                    requestAnimationFrame(processFrame);
-                };
+                    const ctx = canvas.getContext('2d');
 
-                processFrame();
+                    const mediaStream = canvas.captureStream();
+                    const mediaRecorder = new MediaRecorder(mediaStream, {
+                        mimeType: 'video/webm;codecs=vp8,opus',
+                        videoBitsPerSecond: 2500000
+                    });
+
+                    const chunks = [];
+                    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `clip_${index + 1}.webm`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        downloadButton.disabled = false;
+                        downloadButton.textContent = 'Download Complete';
+                        setTimeout(() => {
+                            downloadButton.textContent = 'Download Clip';
+                            progressContainer.style.display = 'none';
+                            progressBar.style.width = '0%';
+                        }, 2000);
+                        resolve();
+                    };
+
+                    video.currentTime = start;
+
+                    video.addEventListener('timeupdate', () => {
+                        const progress = ((video.currentTime - start) / duration) * 100;
+                        progressBar.style.width = `${Math.min(100, progress)}%`;
+                    });
+
+                    await new Promise(resolve => video.addEventListener('canplay', resolve, { once: true }));
+                    
+                    mediaRecorder.start(100);
+                    video.play();
+
+                    const processFrame = () => {
+                        if (video.currentTime >= end) {
+                            video.pause();
+                            mediaRecorder.stop();
+                            return;
+                        }
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        requestAnimationFrame(processFrame);
+                    };
+
+                    processFrame();
+                });
             });
         }
     </script>
