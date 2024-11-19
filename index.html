@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>File Storage with Sharing</title>
+    <title>Zigwangles File Storage</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
         #fileList { margin-top: 20px; }
@@ -14,20 +14,15 @@
             padding: 10px; 
             margin: 5px 0;
         }
-        #copySuccess { color: green; margin-left: 10px; display: none; }
     </style>
 </head>
 <body>
-    <h1>File Storage</h1>
+    <h1>Zigwangles File Storage</h1>
     <input type="file" id="fileInput">
     <button onclick="uploadFile()">Upload File</button>
     <div id="fileList"></div>
 
     <script>
-        function generateShareableLink(fileData) {
-            return `data:application/octet-stream;base64,${fileData.split(',')[1]}`;
-        }
-
         function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
@@ -37,7 +32,6 @@
             reader.onload = function(e) {
                 const files = JSON.parse(localStorage.getItem('files') || '[]');
                 const newFile = {
-                    id: Date.now(),
                     name: file.name,
                     type: file.type,
                     data: e.target.result
@@ -57,13 +51,13 @@
             files.forEach((file) => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
-                const shareableLink = generateShareableLink(file.data);
+                const shareableLink = `https://zigwangles.github.io/${encodeURIComponent(file.name)}`;
                 fileItem.innerHTML = `
                     ${file.name}
                     <div>
                         <button onclick="copyLink('${shareableLink}')">Copy Link</button>
-                        <button onclick="downloadFile('${shareableLink}', '${file.name}')">Download</button>
-                        <button onclick="deleteFile(${file.id})">Delete</button>
+                        <button onclick="downloadFile('${file.data}', '${file.name}')">Download</button>
+                        <button onclick="deleteFile('${file.name}')">Delete</button>
                     </div>
                 `;
                 fileList.appendChild(fileItem);
@@ -83,9 +77,9 @@
             link.click();
         }
 
-        function deleteFile(fileId) {
+        function deleteFile(fileName) {
             const files = JSON.parse(localStorage.getItem('files') || '[]');
-            const updatedFiles = files.filter(file => file.id !== fileId);
+            const updatedFiles = files.filter(file => file.name !== fileName);
             localStorage.setItem('files', JSON.stringify(updatedFiles));
             displayFiles();
         }
