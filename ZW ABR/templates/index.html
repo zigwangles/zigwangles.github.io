@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- If you still want the search bar on the homepage, include it here (optional) -->
+<div class="bg-white border-b border-gray-200 mb-6">
+  <div class="container mx-auto px-4 py-4">
+    <form class="flex items-center space-x-2">
+      <input 
+        type="text" 
+        placeholder="Find your next great listen" 
+        class="flex-1 border border-gray-300 px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" 
+      />
+      <button 
+        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors duration-200"
+      >
+        Search
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Display Categories Dynamically -->
+<div class="container mx-auto px-4 py-6">
+  {% if categories|length > 0 %}
+    <h2 class="text-2xl font-bold mb-4">Categories</h2>
+    {% for cat in categories %}
+      <h3 class="text-xl font-semibold mb-2">{{ cat.name }} ({{ cat.books|length }} books)</h3>
+      {% if cat.books %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 mb-6">
+          {% for book in cat.books %}
+            <div class="bg-white shadow rounded overflow-hidden transition-transform duration-300 hover:scale-105">
+              <img 
+                src="{{ book.cover_image or 'https://via.placeholder.com/300x400?text=No+Cover' }}" 
+                alt="{{ book.title }}" 
+                class="w-full h-48 object-contain bg-gray-100" 
+              />
+              <div class="p-3 flex flex-col">
+                <h4 class="font-semibold text-gray-800 text-sm">{{ book.title }}</h4>
+                <p class="text-gray-600 text-xs">By: {{ book.author }}</p>
+                <a 
+                  href="{{ url_for('book_detail', book_id=book.id) }}" 
+                  class="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 text-sm rounded self-start transition-colors duration-200"
+                >
+                  View Details
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-gray-500 mb-6">No books in this category yet.</p>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <p class="text-gray-500">No categories created yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

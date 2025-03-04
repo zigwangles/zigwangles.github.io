@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">Manage Books</h1>
+
+<!-- Section: Edit Books -->
+<section class="mb-8">
+    <h2 class="text-2xl font-semibold mb-4">Edit Books</h2>
+    <table class="min-w-full bg-white">
+        <thead>
+            <tr>
+                <th class="py-2 px-4 border-b">Title</th>
+                <th class="py-2 px-4 border-b">Author</th>
+                <th class="py-2 px-4 border-b">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for book in books %}
+            <tr class="hover:bg-gray-100">
+                <td class="py-2 px-4 border-b">{{ book.title }}</td>
+                <td class="py-2 px-4 border-b">{{ book.author }}</td>
+                <td class="py-2 px-4 border-b">
+                    <a href="{{ url_for('edit_book', book_id=book.id) }}" class="text-blue-600 hover:underline">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<!-- Section: Edit Tags -->
+<section>
+    <h2 class="text-2xl font-semibold mb-4">Edit Tags</h2>
+    <a href="{{ url_for('add_tag') }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Add Tag</a>
+    <table class="min-w-full bg-white mt-4">
+        <thead>
+            <tr>
+                <th class="py-2 px-4 border-b">Tag</th>
+                <th class="py-2 px-4 border-b"># of Books</th>
+                <th class="py-2 px-4 border-b">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tag in tags %}
+            <tr class="hover:bg-gray-100">
+                <td class="py-2 px-4 border-b">{{ tag.name }}</td>
+                <td class="py-2 px-4 border-b">{{ tag.books|length }}</td>
+                <td class="py-2 px-4 border-b">
+                    <a href="{{ url_for('edit_tag', tag_id=tag.id) }}" class="text-blue-600 hover:underline">Edit</a>
+                    |
+                    <form action="{{ url_for('delete_tag', tag_id=tag.id) }}" method="POST" class="inline-block">
+                        <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete this tag?')">Delete</button>
+                    </form>
+                    |
+                    <a href="{{ url_for('assign_tag', tag_id=tag.id) }}" class="text-purple-600 hover:underline">Assign Books</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

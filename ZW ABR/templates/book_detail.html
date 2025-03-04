@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- Book Detail Header -->
+<div class="bg-white rounded shadow overflow-hidden flex flex-col md:flex-row mb-8 transition-all duration-300 hover:shadow-lg">
+  <div class="md:w-1/3 flex items-center justify-center p-4">
+    {% if book.cover_image %}
+      <img src="{{ book.cover_image }}" alt="Cover for {{ book.title }}" class="w-full h-64 object-contain transition-transform duration-300 transform hover:scale-105" />
+    {% else %}
+      <img src="https://via.placeholder.com/300x400?text=No+Cover" alt="No cover available" class="w-full h-64 object-contain transition-transform duration-300 transform hover:scale-105" />
+    {% endif %}
+  </div>
+  <div class="md:w-2/3 p-6">
+    <h1 class="text-3xl font-bold transition-colors duration-300 hover:text-gray-700">{{ book.title }}</h1>
+    {% if book.author %}
+      <h2 class="text-xl text-gray-600 mt-2 transition-colors duration-300 hover:text-gray-800">by {{ book.author }}</h2>
+    {% endif %}
+    <p class="mt-4 text-gray-700">{{ book.description }}</p>
+    
+    <!-- Categories and Tags -->
+    <p class="mt-2 text-gray-700">
+      <strong>Categories:</strong>
+      {% for cat in book.categories %}
+        <span class="bg-gray-200 px-2 py-1 rounded mr-1">{{ cat.name }}</span>
+      {% endfor %}
+    </p>
+    <p class="mt-2 text-gray-700">
+      <strong>Tags:</strong>
+      {% for t in book.tags %}
+        <span class="bg-green-200 px-2 py-1 rounded mr-1">{{ t.name }}</span>
+      {% endfor %}
+    </p>
+    
+    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+      <div class="mt-4 space-x-2">
+        <a href="{{ url_for('edit_book', book_id=book.id) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded transition-transform duration-300 transform hover:scale-105">Edit Book</a>
+        <form action="{{ url_for('delete_book', book_id=book.id) }}" method="POST" class="inline-block">
+          <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-transform duration-300 transform hover:scale-105" onclick="return confirm('Are you sure?')">Delete Book</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Chapters List -->
+{% if book.chapters %}
+  <div class="mb-8 p-4 bg-white rounded shadow transition-all duration-300 hover:shadow-lg">
+    <h3 class="text-2xl font-semibold mb-4">Chapters</h3>
+    <ul class="list-decimal ml-6 space-y-2">
+      {% for chap in book.chapters|sort(attribute='chapter_number') %}
+        <li>
+          <a href="{{ url_for('book_detail', book_id=book.id) }}?chapter_id={{ chap.id }}" class="text-blue-600 transition-colors duration-200 hover:text-blue-800">
+            Chapter {{ chap.chapter_number or loop.index }}: {{ chap.title }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if current_user.is_authenticated and current_user.username == 'admin' %}
+      <div class="mt-4">
+        <a href="{{ url_for('add_chapter', book_id=book.id) }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition-transform duration-300 transform hover:scale-105">Add Chapter</a>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# Determine the current chapter based on the query parameter "chapter_id". If none, use the first chapter. #}
+{% if book.chapters|length > 0 %}
+  {% set sorted_chapters = book.chapters|sort(attribute='chapter_number') %}
+  {% if chapter is defined %}
+    {% set current_chapter = chapter %}
+  {% else %}
+    {% set current_chapter = sorted_chapters[0] %}
+  {% endif %}
+{% else %}
+  {% set current_chapter = None %}
+{% endif %}
+
+<!-- Audio Player (Apple Music–Inspired) -->
+<div class="max-w-md mx-auto bg-white rounded shadow p-4 transition-all duration-300 hover:shadow-xl">
+  <!-- Cover and Track Info -->
+  <div class="flex items-center space-x-4">
+    <div class="w-20 h-20 overflow-hidden rounded-md shadow transition-transform duration-300 transform hover:scale-105">
+      <img src="{{ book.cover_image or 'https://via.placeholder.com/300x300?text=No+Cover' }}" alt="Cover Art" class="object-contain w-full h-full" />
+    </div>
+    <div class="flex-1">
+      <h3 class="text-xl font-semibold" id="trackTitle">
+        {% if current_chapter %}
+          {{ current_chapter.title }}
+        {% else %}
+          {{ book.title }}
+        {% endif %}
+      </h3>
+      <p class="text-gray-600" id="trackAuthor">{{ book.author or 'Unknown Author' }}</p>
+    </div>
+  </div>
+
+  {% if current_user.is_authenticated %}
+    <div class="mt-4 space-x-2">
+      {% if current_chapter %}
+        <!-- Only show these links if current_chapter isn't None -->
+        <a href="{{ url_for('start_reading', chapter_id=current_chapter.id) }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+          Currently Reading
+        </a>
+        <a href="{{ url_for('save_later', chapter_id=current_chapter.id) }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+          Save for Later
+        </a>
+        {% if user_book %}
+  <a href="{{ url_for('finish_book', chapter_id=user_book.current_chapter_id) }}">Finish</a>
+{% else %}
+  <span class="text-gray-500">You haven't started this book yet.</span>
+{% endif %}
+      {% else %}
+        <!-- If there's no valid chapter, show a placeholder -->
+        <span class="text-gray-500">No chapter selected or no chapters available.</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+<!--Add Reviews-->
+  {% if current_user.is_authenticated %}
+  <p class="mt-4">
+    <a href="{{ url_for('add_review', book_id=book.id) }}"
+       class="text-blue-600 hover:underline">
+      Add a Review
+    </a>
+  </p>
+{% endif %}
+
+<!--View Reviews-->
+{% set all_reviews = book.reviews %}
+{% if all_reviews|length > 0 %}
+  {% set avg_rating = (all_reviews|map(attribute='rating')|sum) / (all_reviews|length) %}
+  <p>Average Rating: {{ avg_rating|round(1) }} ({{ all_reviews|length }} reviews)</p>
+
+  <ul class="mt-2 space-y-2">
+  {% for r in all_reviews %}
+    <li class="border-b pb-2">
+      <strong>{{ r.user.username }}</strong> gave {{ r.rating }}/5<br>
+      <em>{{ r.comment or 'No comment.' }}</em>
+    </li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p>No reviews yet. Be the first to review!</p>
+{% endif %}
+
+  <!-- Controls -->
+  <div class="flex items-center justify-center space-x-6 mt-4">
+    <button class="text-2xl text-gray-700 hover:text-black disabled:opacity-50 transition-transform duration-300 transform hover:scale-110" id="prevBtn" disabled>⏮</button>
+    <button class="bg-gray-200 rounded-full w-12 h-12 flex items-center justify-center text-2xl hover:bg-gray-300 transition-transform duration-300 transform hover:scale-110" id="playPauseBtn">▶</button>
+    <button class="text-2xl text-gray-700 hover:text-black disabled:opacity-50 transition-transform duration-300 transform hover:scale-110" id="nextBtn" disabled>⏭</button>
+  </div>
+
+  <!-- Progress Bar and Time -->
+  <div class="mt-4">
+    <div class="flex items-center justify-between text-sm">
+      <span id="currentTime">0:00</span>
+      <span id="duration">0:00</span>
+    </div>
+    <input type="range" id="seekBar" value="0" min="0" max="100" class="w-full mt-1 accent-blue-600 cursor-pointer transition-all duration-300" />
+  </div>
+</div>
+
+<!-- Audio Element -->
+{% if current_chapter %}
+  <audio id="audioPlayer" src="{{ current_chapter.audio_file }}" preload="metadata"></audio>
+{% else %}
+  <audio id="audioPlayer" preload="metadata"></audio>
+{% endif %}
+
+<!--View Reviews-->
+{% set all_reviews = book.reviews %}
+{% if all_reviews|length > 0 %}
+  {% set avg_rating = (all_reviews|map(attribute='rating')|sum) / (all_reviews|length) %}
+  <p>Average Rating: {{ avg_rating|round(1) }} ({{ all_reviews|length }} reviews)</p>
+
+  <ul class="mt-2 space-y-2">
+  {% for r in all_reviews %}
+    <li class="border-b pb-2">
+      <strong>{{ r.user.username }}</strong> gave {{ r.rating }}/5<br>
+      <em>{{ r.comment or 'No comment.' }}</em>
+    </li>
+  {% endfor %}
+  </ul>
+{% else %}
+  <p>No reviews yet. Be the first to review!</p>
+{% endif %}
+
+<!-- JavaScript: Chapter Auto-Advance, Audio Controls, and Position Saving -->
+<script>
+  // Build chapters array from template data
+  const chapters = [
+    {% for chap in book.chapters|sort(attribute='chapter_number') %}
+      {
+        id: {{ chap.id }},
+        title: {{ chap.title|tojson }},
+        audio: {{ chap.audio_file|tojson }}
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  // Determine current chapter index from query parameter, if any
+  let currentChapterIndex = 0;
+  const urlParams = new URLSearchParams(window.location.search);
+  const chapterIdParam = urlParams.get('chapter_id');
+  if (chapterIdParam && chapters.length > 0) {
+    const idx = chapters.findIndex(chap => chap.id == chapterIdParam);
+    if (idx !== -1) {
+      currentChapterIndex = idx;
+    }
+  }
+
+  // If no chapters, disable audio player controls
+  if (chapters.length === 0) {
+    document.getElementById('playPauseBtn').disabled = true;
+  }
+
+  const audio = document.getElementById('audioPlayer');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const currentTimeEl = document.getElementById('currentTime');
+  const durationEl = document.getElementById('duration');
+  const seekBar = document.getElementById('seekBar');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let isPlaying = false;
+
+  // Resume last position if user_book is defined
+  {% if user_book %}
+    audio.currentTime = {{ user_book.current_position|default(0) }};
+  {% endif %}
+
+  // Format seconds to mm:ss
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Update duration when metadata loads
+  audio.addEventListener('loadedmetadata', () => {
+    durationEl.textContent = formatTime(audio.duration);
+    seekBar.max = Math.floor(audio.duration);
+  });
+
+  // Update current time and seek bar
+  let lastUpdateTime = 0; // We'll only update server every 1s
+  audio.addEventListener('timeupdate', () => {
+    currentTimeEl.textContent = formatTime(audio.currentTime);
+    seekBar.value = Math.floor(audio.currentTime);
+
+    // Update server every 1 second
+    if (audio.currentTime - lastUpdateTime >= 1) {
+      lastUpdateTime = audio.currentTime;
+      updatePosition(audio.currentTime);
+    }
+  });
+
+  // Play/Pause toggle
+  playPauseBtn.addEventListener('click', () => {
+    if (!isPlaying) {
+      audio.play();
+      isPlaying = true;
+      playPauseBtn.textContent = '⏸';
+    } else {
+      audio.pause();
+      isPlaying = false;
+      playPauseBtn.textContent = '▶';
+    }
+  });
+
+  // Seek functionality
+  seekBar.addEventListener('input', () => {
+    audio.currentTime = seekBar.value;
+  });
+
+  // Auto-advance to the next chapter when current ends
+  audio.addEventListener('ended', () => {
+    if (currentChapterIndex + 1 < chapters.length) {
+      currentChapterIndex++;
+      const nextChapter = chapters[currentChapterIndex];
+      audio.src = nextChapter.audio;
+      document.getElementById('trackTitle').textContent = nextChapter.title;
+      // Update URL without reload:
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.set('chapter_id', nextChapter.id);
+      window.history.pushState({}, '', newUrl);
+      audio.play();
+    } else {
+      isPlaying = false;
+      playPauseBtn.textContent = '▶';
+    }
+  });
+
+  // Update position on server
+  function updatePosition(position) {
+    // Only do this if user is logged in
+    {% if current_user.is_authenticated %}
+      fetch(`{{ url_for('update_position', book_id=book.id) }}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          'position': position
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Position updated:', data);
+      })
+      .catch(err => console.error(err));
+    {% endif %}
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold">Review {{ book.title }}</h1>
+
+<form method="POST" class="mt-4 space-y-4">
+  <!-- Rating (1-5) -->
+  <div>
+    <label class="block mb-1">Rating (1–5):</label>
+    <select name="rating" class="border p-2">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3" selected>3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+
+  <!-- Comment -->
+  <div>
+    <label class="block mb-1">Comment:</label>
+    <textarea name="comment" rows="4" class="border p-2 w-full" placeholder="Share your thoughts..."></textarea>
+  </div>
+
+  <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+    Submit Review
+  </button>
+</form>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded shadow">
+  <h1 class="text-3xl font-bold mb-6">Add a New Chapter for "{{ book.title }}"</h1>
+  <form method="POST">
+    <div class="mb-4">
+      <label class="block text-gray-700">Chapter Title:</label>
+      <input type="text" name="title" class="w-full border border-gray-300 p-2 rounded" required>
+    </div>
+    <div class="mb-4">
+      <label class="block text-gray-700">Chapter Number:</label>
+      <input type="number" name="chapter_number" class="w-full border border-gray-300 p-2 rounded">
+    </div>
+    <div class="mb-4">
+      <label class="block text-gray-700">Chapter Audio File URL:</label>
+      <input type="url" name="audio_file" class="w-full border border-gray-300 p-2 rounded" placeholder="https://storj.io/yourbucket/chapter1.mp3" required>
+    </div>
+    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">Add Chapter</button>
+  </form>
+</div>
+{% endblock %}

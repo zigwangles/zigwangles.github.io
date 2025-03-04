@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Manage Tags</h1>
+<a href="{{ url_for('add_category') }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Add Category</a>
+<ul class="mt-4 space-y-2">
+  {% for cat in categories %}
+    <li>
+      <span>{{ cat.name }}</span>
+      <a href="{{ url_for('edit_category', cat_id=cat.id) }}" class="text-blue-600 hover:underline ml-2">Edit</a>
+      <form action="{{ url_for('delete_category', cat_id=cat.id) }}" method="POST" class="inline-block ml-2">
+        <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete this category?')">Delete</button>
+      </form>
+    </li>
+  {% else %}
+    <p>No tags yet.</p>
+  {% endfor %}
+</ul>
+{% endblock %}

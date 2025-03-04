@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="bg-white rounded shadow p-6">
+  <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+
+  <ul class="list-disc ml-6 space-y-2">
+    <li>
+      <a href="{{ url_for('add_book') }}" class="text-blue-600 hover:underline">
+        Add a New Book
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('manage_books') }}" class="text-blue-600 hover:underline">
+        Manage Books
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('choose_book_for_chapter') }}" class="text-blue-600 hover:underline">
+        Add Chapter (Choose Book)
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('list_categories') }}" class="text-blue-600 hover:underline">
+        Manage Categories
+      </a>
+      |
+      <a href="{{ url_for('add_category') }}" class="text-green-600 hover:underline">
+        Add Category
+      </a>
+    </li>
+    <li>
+      <a href="{{ url_for('list_tags') }}" class="text-blue-600 hover:underline">
+        Manage Tags
+      </a>
+      |
+      <a href="{{ url_for('add_tag') }}" class="text-green-600 hover:underline">
+        Add Tag
+      </a>
+    </li>
+  </ul>
+</div>
+{% endblock %}

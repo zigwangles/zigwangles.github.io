@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">Assign Books to Tag: {{ tag.name }}</h1>
+<form method="POST">
+    <div class="mb-4">
+        {% for book in books %}
+        <div class="mb-2">
+            <input type="checkbox" name="books" value="{{ book.id }}"
+                {% if book in tag.books %} checked {% endif %}>
+            {{ book.title }} by {{ book.author }}
+        </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Update Assignments</button>
+</form>
+{% endblock %}

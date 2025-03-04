@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Edit Book</h1>
+<form method="POST">
+  <div class="mb-4">
+    <label class="block">Title:</label>
+    <input type="text" name="title" value="{{ book.title }}" class="border p-2 w-full" required>
+  </div>
+  <div class="mb-4">
+    <label class="block">Author:</label>
+    <input type="text" name="author" value="{{ book.author }}" class="border p-2 w-full">
+  </div>
+  <div class="mb-4">
+    <label class="block">Description:</label>
+    <textarea name="description" class="border p-2 w-full" rows="4">{{ book.description }}</textarea>
+  </div>
+  <div class="mb-4">
+    <label class="block">Cover Image URL:</label>
+    <input type="url" name="cover_image" value="{{ book.cover_image }}" class="border p-2 w-full">
+  </div>
+  
+  <div class="mb-4">
+    <label class="block mb-2">Categories:</label>
+    {% for cat in all_categories %}
+      <label class="inline-block mr-4">
+        <input type="checkbox" name="categories" value="{{ cat.id }}"
+          {% if cat in book.categories %}checked{% endif %}>
+        {{ cat.name }}
+      </label>
+    {% endfor %}
+  </div>
+  
+  <div class="mb-4">
+    <label class="block mb-2">Tags:</label>
+    {% for t in all_tags %}
+      <label class="inline-block mr-4">
+        <input type="checkbox" name="tags" value="{{ t.id }}"
+          {% if t in book.tags %}checked{% endif %}>
+        {{ t.name }}
+      </label>
+    {% endfor %}
+  </div>
+  
+  <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+</form>
+{% endblock %}

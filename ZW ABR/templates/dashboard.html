@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Your Dashboard</h1>
+
+<!-- Currently Reading -->
+<h2 class="text-xl font-semibold mb-2">Currently Reading</h2>
+{% if current %}
+  <ul class="list-disc ml-6 mb-4">
+    {% for ub in current %}
+      <li>
+        <strong>{{ ub.book.title }}</strong> 
+        by {{ ub.book.author or 'Unknown' }}
+        <br>
+        <!-- Example: Show progress -->
+        <span>Chapter ID: {{ ub.current_chapter_id }}, Time: {{ ub.current_position|default(0)|int }}s</span>
+        <br>
+        <!-- Continue Reading calls book_detail or a route with the last chapter? Up to you. -->
+        <a href="{{ url_for('book_detail', book_id=ub.book.id) }}" class="text-blue-600 hover:underline">
+          Continue
+        </a>
+        <!-- Mark as finished at the book level (assuming you have a finish_book(book_id) route) -->
+        <a href="{{ url_for('finish_book', book_id=ub.book.id) }}" class="text-green-600 hover:underline ml-2">
+          Finish
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-gray-500 mb-4">You aren't currently reading any books.</p>
+{% endif %}
+
+<!-- Saved Books -->
+<h2 class="text-xl font-semibold mb-2">Saved for Later</h2>
+{% if saved %}
+  <ul class="list-disc ml-6 mb-4">
+    {% for ub in saved %}
+      <li>
+        <strong>{{ ub.book.title }}</strong> 
+        by {{ ub.book.author or 'Unknown' }}
+        <br>
+        {% if ub.resume_chapter_id %}
+          <!-- Use the chapter-based route for Start Reading -->
+          <a href="{{ url_for('start_reading', chapter_id=ub.resume_chapter_id) }}"
+             class="text-blue-600 hover:underline"
+          >
+            Start Reading
+          </a>
+        {% else %}
+          <span class="text-gray-500">No chapters available</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-gray-500 mb-4">No saved books yet.</p>
+{% endif %}
+
+<!-- Finished Books -->
+<h2 class="text-xl font-semibold mb-2">Finished</h2>
+{% if finished %}
+  <ul class="list-disc ml-6 mb-4">
+    {% for ub in finished %}
+      <li>
+        <strong>{{ ub.book.title }}</strong> 
+        by {{ ub.book.author or 'Unknown' }}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-gray-500 mb-4">You haven't finished any books yet.</p>
+{% endif %}
+
+<!-- If you want a direct link to the first chapter of the last selected book, etc.
+     You can safely remove this snippet if not needed. -->
+{% if first_chapter %}
+  <a href="{{ url_for('start_reading', chapter_id=first_chapter.id) }}">Start Reading</a>
+{% endif %}
+{% endblock %}

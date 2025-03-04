@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZW ABR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <!-- Navigation Bar -->
+  <nav class="bg-gray-100 border-b border-gray-200">
+    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+      <!-- Left: Brand and Browse dropdown -->
+      <div class="flex items-center space-x-6">
+        <a href="{{ url_for('index') }}" class="text-2xl font-bold text-gray-900">ZW ABR</a>
+        <div class="relative group inline-block">
+          <button class="flex items-center space-x-1 text-gray-700 hover:text-black font-medium focus:outline-none">
+            <span>Browse</span>
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+          <!-- Dropdown Menu (shows all tags) -->
+          <div class="absolute left-0 mt-2 bg-white border border-gray-200 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+            <ul class="py-2">
+              {% for t in nav_tags %}
+                <li>
+                  <a href="{{ url_for('tag_detail', tag_id=t.id) }}" class="block px-4 py-2 hover:bg-gray-100">
+                    {{ t.name }}
+                  </a>
+                </li>
+              {% else %}
+                <li class="block px-4 py-2 text-gray-500">No tags found.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right: Login/Sign Up (if not logged in) or Dashboard/Logout (if logged in) -->
+      <!-- base.html snippet: Right side nav links -->
+<div class="flex items-center space-x-4">
+  {% if current_user.is_authenticated %}
+    <a href="{{ url_for('dashboard') }}" class="text-gray-700 hover:text-black font-medium">Dashboard</a>
+    
+    {% if current_user.username == 'admin' %}
+      <a href="{{ url_for('admin_dashboard') }}" class="text-gray-700 hover:text-black font-medium">Admin Dashboard</a>
+    {% endif %}
+    
+    <a href="{{ url_for('logout') }}" class="text-gray-700 hover:text-black font-medium">Logout</a>
+  {% else %}
+    <a href="{{ url_for('login') }}" class="text-gray-700 hover:text-black font-medium">Login</a>
+    <a href="{{ url_for('signup') }}" class="text-gray-700 hover:text-black font-medium">Sign Up</a>
+  {% endif %}
+</div>
+    </div>
+  </nav>
+  
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-6">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for message in messages %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
